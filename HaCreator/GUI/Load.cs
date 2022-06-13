@@ -15,7 +15,7 @@ using MapleLib.WzLib.WzProperties;
 using HaCreator.MapEditor;
 using HaCreator.Wz;
 using MapleLib.WzLib.Serialization;
-
+using System.Collections.Generic;
 
 namespace HaCreator.GUI
 {
@@ -141,75 +141,141 @@ namespace HaCreator.GUI
         private void LoadButton_Click(object sender, EventArgs e)
         {
             //Hide();
-            WaitWindow ww = new WaitWindow("Loading...");
-            ww.Show();
-            Application.DoEvents();
-
-            WzImage mapImage = null;
-            int mapid = -1;
-            string mapName = null, streetName = "", categoryName = "";
-            WzSubProperty strMapProp = null;
-
-
-            if (HAMSelect.Checked)
+            int selectedIndex = -1;
+            do
             {
-                MapLoader.CreateMapFromHam(multiBoard, Tabs, File.ReadAllText(HAMBox.Text), rightClickHandler);
-                DialogResult = DialogResult.OK;
-                ww.EndWait();
-                Close();
-                return;
-            }
-            else if (XMLSelect.Checked)
-            {
-                try
+                WaitWindow ww = new WaitWindow("Loading...");
+                ww.Show();
+                Application.DoEvents();
+
+                WzImage mapImage = null;
+                int mapid = -1;
+                string mapName = null, streetName = "", categoryName = "";
+                WzSubProperty strMapProp = null;
+
+
+                if (HAMSelect.Checked)
                 {
-                    mapImage = (WzImage)new WzXmlDeserializer(false, null).ParseXML(XMLBox.Text)[0];
-                }
-                catch
-                {
-                    MessageBox.Show("Error while loading XML. Aborted.");
+                    MapLoader.CreateMapFromHam(multiBoard, Tabs, File.ReadAllText(HAMBox.Text), rightClickHandler);
+                    DialogResult = DialogResult.OK;
                     ww.EndWait();
-                    Show();
+                    Close();
                     return;
                 }
-            }
-            else if (WZSelect.Checked)
-            {
-                if (mapBrowser.SelectedItem == null)
-                    return; // racing event
-
-                string selectedName = mapBrowser.SelectedItem;
-
-                if (selectedName.StartsWith("MapLogin")) // MapLogin, MapLogin1, MapLogin2, MapLogin3
+                else if (XMLSelect.Checked)
                 {
-                    mapImage = (WzImage)Program.WzManager["ui"][selectedName + ".img"];
-                    mapName = streetName = categoryName = selectedName;
+                    try
+                    {
+                        mapImage = (WzImage)new WzXmlDeserializer(false, null).ParseXML(XMLBox.Text)[0];
+                    }
+                    catch
+                    {
+                        MessageBox.Show("Error while loading XML. Aborted.");
+                        ww.EndWait();
+                        Show();
+                        return;
+                    }
                 }
-                else if (mapBrowser.SelectedItem == "CashShopPreview")
+                else if (WZSelect.Checked)
                 {
-                    mapImage = (WzImage)Program.WzManager["ui"]["CashShopPreview.img"];
-                    mapName = streetName = categoryName = "CashShopPreview";
+                    if (mapBrowser.SelectedItem == null)
+                        return; // racing event
+
+                    string selectedName = mapBrowser.SelectedItem;
+
+                    if (selectedIndex > -1)
+                    {
+                        selectedName = mapBrowser.maps[selectedIndex];
+                    }
+                    else
+                    {
+                        for (int i = 0; i < mapBrowser.maps.Count; i++)
+                        {
+                            if (selectedName.Equals(mapBrowser.maps[i]))
+                            {
+                                selectedIndex = i;
+                                break;
+                            }
+                        }
+                    }
+
+                    Console.WriteLine(selectedName + " " + selectedIndex);
+
+                    if (selectedName.StartsWith("MapLogin")) // MapLogin, MapLogin1, MapLogin2, MapLogin3
+                    {
+                        mapImage = (WzImage)Program.WzManager["ui"][selectedName + ".img"];
+                        mapName = streetName = categoryName = selectedName;
+                    }
+                    else if (mapBrowser.SelectedItem == "CashShopPreview")
+                    {
+                        mapImage = (WzImage)Program.WzManager["ui"]["CashShopPreview.img"];
+                        mapName = streetName = categoryName = "CashShopPreview";
+                    }
+                    else
+                    {
+                        string mapid_str = selectedName.Substring(0, 9);
+                        int.TryParse(mapid_str, out mapid);
+
+                        string mapcat = "Map" + mapid_str.Substring(0, 1);
+
+                        WzDirectory directory = Program.WzManager.FindMapWz(mapcat);
+                        mapImage = (WzImage)directory[mapid_str + ".img"];
+
+                        strMapProp = WzInfoTools.GetMapStringProp(mapid_str);
+                        mapName = WzInfoTools.GetMapName(strMapProp);
+                        streetName = WzInfoTools.GetMapStreetName(strMapProp);
+                        categoryName = WzInfoTools.GetMapCategoryName(strMapProp);
+                    }
+                }
+
+                if (File.Exists(ApplicationSettings.MapleFolder + "\\Maps\\" + mapid + "_0 " + mapName + ".png"))
+                {
+                    selectedIndex += 1;
+                    continue;
+                }
+
+                Board board = MapLoader.CreateMapFromImage(mapid, mapImage, mapName, streetName, categoryName, strMapProp, Tabs, multiBoard, rightClickHandler);
+
+                DialogResult = DialogResult.OK;
+                ww.EndWait();
+
+                if (board != null)
+                {
+                    while (board.Loading)
+                    {
+                        System.Threading.Thread.Sleep(10);
+                    }
+                    selectedIndex += 1;
+                    
+                    if (!Directory.Exists(ApplicationSettings.MapleFolder + "\\Maps"))
+                    {
+                        Directory.CreateDirectory(ApplicationSettings.MapleFolder + "\\Maps");
+                    }
+
+                    try
+                    {
+                        List<System.Drawing.Bitmap> bmp = board.GetBitmap();
+                        if (bmp == null)
+                        {
+                            return;
+                        }
+                        for (int i = 0; i < bmp.Count; i++)
+                        {
+                            bmp[i].Save(ApplicationSettings.MapleFolder + "\\Maps\\" + mapid + "_" + i + " " + multiBoard.SelectedBoard.MapInfo.mapName + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        }
+
+                        board.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
                 }
                 else
                 {
-                    string mapid_str = mapBrowser.SelectedItem.Substring(0, 9);
-                    int.TryParse(mapid_str, out mapid);
-
-                    string mapcat = "Map" + mapid_str.Substring(0, 1);
-
-                    WzDirectory directory = Program.WzManager.FindMapWz(mapcat);
-                    mapImage = (WzImage)directory[mapid_str + ".img"];
-
-                    strMapProp = WzInfoTools.GetMapStringProp(mapid_str);
-                    mapName = WzInfoTools.GetMapName(strMapProp);
-                    streetName = WzInfoTools.GetMapStreetName(strMapProp);
-                    categoryName = WzInfoTools.GetMapCategoryName(strMapProp);
+                    selectedIndex += 1;
                 }
-            }
-            MapLoader.CreateMapFromImage(mapid, mapImage, mapName, streetName, categoryName, strMapProp, Tabs, multiBoard, rightClickHandler);
-
-            DialogResult = DialogResult.OK;
-            ww.EndWait();
+            } while (selectedIndex < mapBrowser.maps.Count);
             Close();
         }
 

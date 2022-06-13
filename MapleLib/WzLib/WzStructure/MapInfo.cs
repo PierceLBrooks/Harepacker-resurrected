@@ -34,7 +34,7 @@ namespace MapleLib.WzLib.WzStructure
     {
         public static MapInfo Default = new MapInfo();
 
-        private WzImage image = null;
+        public WzImage image = null;
 
         //Editor related, not actual properties
         public MapType mapType = MapType.RegularMap;

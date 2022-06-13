@@ -20,7 +20,7 @@ namespace HaCreator.CustomControls
     public partial class MapBrowser : UserControl
     {
         private bool loadMapAvailable = false;
-        private readonly List<string> maps = new List<string>();
+        public readonly List<string> maps = new List<string>();
 
         public MapBrowser()
         {

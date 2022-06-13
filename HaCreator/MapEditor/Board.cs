@@ -17,6 +17,9 @@ using HaCreator.MapEditor.UndoRedo;
 using HaCreator.MapEditor.Input;
 using HaCreator.MapEditor.Instance.Shapes;
 using HaSharedLibrary.Util;
+using MapleLib.WzLib.WzProperties;
+using MapleLib.WzLib;
+using MapleLib;
 
 namespace HaCreator.MapEditor
 {
@@ -109,6 +112,18 @@ namespace HaCreator.MapEditor
             }
         }
 
+        public static System.Drawing.Bitmap MagnifyImage(System.Drawing.Bitmap FullsizeImage, float coeff)
+        {
+            int scaleWidth = (int)((float)FullsizeImage.Width / coeff);
+            int scaleHeight = (int)((float)FullsizeImage.Height / coeff);
+            System.Drawing.Bitmap bmp = new System.Drawing.Bitmap(scaleWidth, scaleHeight);
+            System.Drawing.Graphics draw = System.Drawing.Graphics.FromImage(FullsizeImage);
+            //draw.FillRectangle(System.Drawing.Brushes.Black, new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height));
+            draw.DrawImage(FullsizeImage, 0, 0, scaleWidth, scaleHeight);
+            draw.Dispose();
+            return bmp;
+        }
+
         public static System.Drawing.Bitmap ResizeImage(System.Drawing.Bitmap FullsizeImage, float coeff)
         {
             return (System.Drawing.Bitmap)FullsizeImage.GetThumbnailImage((int)Math.Round(FullsizeImage.Width / coeff), (int)Math.Round(FullsizeImage.Height / coeff), null, IntPtr.Zero);
@@ -124,6 +139,150 @@ namespace HaCreator.MapEditor
             return result;
         }
 
+        public List<System.Drawing.Bitmap> GetBitmap()
+        {
+            try
+            {
+                List<System.Drawing.Bitmap> bmps = new List<System.Drawing.Bitmap>();
+                System.Drawing.Bitmap bmp = null;
+                lock (parent)
+                {
+                    System.Drawing.Bitmap backgroundRender = new System.Drawing.Bitmap(mapSize.X, mapSize.Y);
+                    System.Drawing.Graphics tileBuf = System.Drawing.Graphics.FromImage(backgroundRender);
+                    //tileBuf.FillRectangle(System.Drawing.Brushes.Black, new System.Drawing.Rectangle(0, 0, mapSize.X, mapSize.Y));
+                    foreach (BoardItem item in BoardItems.BackBackgrounds)
+                    {
+                        tileBuf.DrawImage(item.Image, new System.Drawing.Point(item.X + centerPoint.X - item.Origin.X, item.Y + centerPoint.Y - item.Origin.Y));
+                    }
+                    /*int x = 0;
+                    int y = 0;
+                    int width = -1;
+                    int height = -1;
+                    for (int i = 0; i < mapSize.Y; i++)
+                    {
+                        for (int j = 0; j < mapSize.X; j++)
+                        {
+                            if (!backgroundRender.GetPixel(j, i).Equals(System.Drawing.Color.Black))
+                            {
+                                if (j - 1 < 0)
+                                {
+                                    continue;
+                                }
+                                if (!backgroundRender.GetPixel(j - 1, i).Equals(System.Drawing.Color.Black))
+                                {
+                                    continue;
+                                }
+                                if (j > x)
+                                {
+                                    x = j;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    for (int i = 0; i < mapSize.X; i++)
+                    {
+                        for (int j = 0; j < mapSize.Y; j++)
+                        {
+                            if (!backgroundRender.GetPixel(i, j).Equals(System.Drawing.Color.Black))
+                            {
+                                if (j - 1 < 0)
+                                {
+                                    continue;
+                                }
+                                if (!backgroundRender.GetPixel(i, j - 1).Equals(System.Drawing.Color.Black))
+                                {
+                                    continue;
+                                }
+                                if (j > y)
+                                {
+                                    y = j;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    for (int i = mapSize.Y - 1; i >= 0; i--)
+                    {
+                        for (int j = mapSize.X -1; j > x; j--)
+                        {
+                            if (!backgroundRender.GetPixel(j, i).Equals(System.Drawing.Color.Black))
+                            {
+                                if (j + 1 >= mapSize.X)
+                                {
+                                    continue;
+                                }
+                                if (!backgroundRender.GetPixel(j + 1, i).Equals(System.Drawing.Color.Black))
+                                {
+                                    continue;
+                                }
+                                if (j < width)
+                                {
+                                    width = j;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    for (int i = mapSize.X - 1; i >= 0; i--)
+                    {
+                        for (int j = mapSize.Y - 1; j > y; j--)
+                        {
+                            if (!backgroundRender.GetPixel(i, j).Equals(System.Drawing.Color.Black))
+                            {
+                                if (j + 1 >= mapSize.Y)
+                                {
+                                    continue;
+                                }
+                                if (!backgroundRender.GetPixel(i, j + 1).Equals(System.Drawing.Color.Black))
+                                {
+                                    continue;
+                                }
+                                if (j < height)
+                                {
+                                    height = j;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if (width < 0)
+                    {
+                        width = mapSize.X - x;
+                    }
+                    if (height < 0)
+                    {
+                        height = mapSize.Y - y;
+                    }
+                    float scaleX = (float)width / (float)mapSize.X;
+                    float scaleY = (float)height / (float)mapSize.Y;
+                    float scale = scaleX;
+                    if (scale < scaleY)
+                    {
+                        scale = scaleY;
+                    }
+                    Console.WriteLine("hi " + scale + " " + x + " " + y + " " + width + " " + height);
+                    tileBuf.Dispose();
+                    backgroundRender = CropImage(backgroundRender, new System.Drawing.Rectangle(x, y, width, height));*/
+                    //backgroundRender = MagnifyImage(backgroundRender, scale);
+                    //backgroundRender.Save(ApplicationSettings.MapleFolder + "\\bkg.bmp");
+                    bmp = new System.Drawing.Bitmap(mapSize.X, mapSize.Y);
+                    System.Drawing.Graphics processor = System.Drawing.Graphics.FromImage(bmp);
+                    //processor.DrawImage(backgroundRender, 0, 0);
+                    foreach (BoardItem item in BoardItems.TileObjs)
+                    {
+                        processor.DrawImage(item.Image, new System.Drawing.Point(item.X + centerPoint.X - item.Origin.X, item.Y + centerPoint.Y - item.Origin.Y));
+                    }
+                    bmps.Add(backgroundRender);
+                    bmps.Add(bmp);
+                }
+                return bmps;
+            }
+            catch
+            {
+                return null;
+            }
+        }
 
         public bool RegenerateMinimap()
         {

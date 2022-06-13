@@ -152,7 +152,9 @@ namespace HaCreator.Wz
         {
             img.Changed = true;
             updatedImages.Add(img);
-            wzFilesUpdated[GetMainDirectoryByName(name).File] = true;
+            WzMainDirectory dir = GetMainDirectoryByName(name);
+            if (dir != null)
+                wzFilesUpdated[dir.File] = true;
         }
 
         /// <summary>
@@ -167,6 +169,9 @@ namespace HaCreator.Wz
             if (name.EndsWith(".wz"))
                 name = name.Replace(".wz", "");
 
+            if (!wzDirs.ContainsKey(name))
+                return null;
+
             return wzDirs[name];
         }
 
@@ -177,7 +182,7 @@ namespace HaCreator.Wz
 
         public WzDirectory String
         {
-            get { return GetMainDirectoryByName("string").MainDir; }
+            get { return wzDirs.ContainsKey("string") ? GetMainDirectoryByName("string").MainDir : null; }
         }
 
         //data.wz is wildly inconsistent between versions now, just avoid at all costs
@@ -211,6 +216,8 @@ namespace HaCreator.Wz
         public void ExtractNpcFile()
         {
             WzImage npcImage = (WzImage)String["Npc.img"];
+            if (npcImage == null)
+                return;
             if (!npcImage.Parsed)
                 npcImage.ParseImage();
             foreach (WzSubProperty npc in npcImage.WzProperties)
@@ -276,6 +283,8 @@ namespace HaCreator.Wz
         public void ExtractMapMarks()
         {
             WzImage mapHelper = (WzImage)this["map"]["MapHelper.img"];
+            if (mapHelper == null)
+                return;
             foreach (WzCanvasProperty mark in mapHelper["mark"].WzProperties)
             {
                 Program.InfoManager.MapMarks[mark.Name] = mark.GetLinkedWzCanvasBitmap();
@@ -285,6 +294,8 @@ namespace HaCreator.Wz
         public void ExtractTileSets()
         {
             WzDirectory tileParent = (WzDirectory)this["map"]["Tile"];
+            if (tileParent == null)
+                return;
             foreach (WzImage tileset in tileParent.WzImages)
                 Program.InfoManager.TileSets[WzInfoTools.RemoveExtension(tileset.Name)] = tileset;
         }
@@ -330,6 +341,10 @@ namespace HaCreator.Wz
         public void ExtractStringWzMaps()
         {
             WzImage mapStringsParent = (WzImage)String["Map.img"];
+            if (mapStringsParent == null)
+            {
+                return;
+            }
             if (!mapStringsParent.Parsed) mapStringsParent.ParseImage();
             foreach (WzSubProperty mapCat in mapStringsParent.WzProperties)
             {
@@ -353,8 +368,20 @@ namespace HaCreator.Wz
 
         public void ExtractPortals()
         {
-            WzSubProperty portalParent = (WzSubProperty)this["map"]["MapHelper.img"]["portal"];
+            WzSubProperty portalParent = null;
+            try
+            {
+                portalParent = (WzSubProperty)this["map"]["MapHelper.img"]["portal"];
+            }
+            catch (Exception ex)
+            {
+                portalParent = null;
+            }
+            if (portalParent == null)
+                return;
             WzSubProperty editorParent = (WzSubProperty)portalParent["editor"];
+            if (editorParent == null)
+                return;
             for (int i = 0; i < editorParent.WzProperties.Count; i++)
             {
                 WzCanvasProperty portal = (WzCanvasProperty)editorParent.WzProperties[i];

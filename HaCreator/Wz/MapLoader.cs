@@ -83,9 +83,10 @@ namespace HaCreator.Wz
                         copyPropNames.Add(prop.Name);
                         if (!userless)
                         {
-                            MessageBox.Show("The map you are opening has the feature \"" + prop.Name + "\", which is purposely not supported in the editor.\r\nTo get around this, HaCreator will copy the original feature's data byte-to-byte. This might cause the feature to stop working if it depends on map objects, such as footholds or mobs.");
+                            //MessageBox.Show("The map you are opening has the feature \"" + prop.Name + "\", which is purposely not supported in the editor.\r\nTo get around this, HaCreator will copy the original feature's data byte-to-byte. This might cause the feature to stop working if it depends on map objects, such as footholds or mobs.");
                         }
-                        continue;
+                        return null;
+                        //continue;
                     case "tokyoBossParty": // Neo Tokyo 802000801.img
                     case "skyWhale":
                     case "rectInfo":
@@ -398,6 +399,8 @@ namespace HaCreator.Wz
         public static void LoadRopes(WzImage mapImage, Board mapBoard)
         {
             WzSubProperty ropeParent = (WzSubProperty)mapImage["ladderRope"];
+            if (ropeParent == null)
+                return;
             foreach (WzSubProperty rope in ropeParent.WzProperties)
             {
                 int x = InfoTool.GetInt(rope["x"]);
@@ -438,6 +441,8 @@ namespace HaCreator.Wz
             FootholdAnchor a;
             FootholdAnchor b;
             Dictionary<int, FootholdLine> fhs = new Dictionary<int, FootholdLine>();
+            if (footholdParent == null)
+                return;
             foreach (WzSubProperty layerProp in footholdParent.WzProperties)
             {
                 layer = int.Parse(layerProp.Name);
@@ -540,6 +545,8 @@ namespace HaCreator.Wz
         public static void LoadPortals(WzImage mapImage, Board mapBoard)
         {
             WzSubProperty portalParent = (WzSubProperty)mapImage["portal"];
+            if (portalParent == null)
+                return;
             foreach (WzSubProperty portal in portalParent.WzProperties)
             {
                 int x = InfoTool.GetInt(portal["x"]);
@@ -622,6 +629,8 @@ namespace HaCreator.Wz
             WzSubProperty bgParent = (WzSubProperty)mapImage["back"];
             WzSubProperty bgProp;
             int i = 0;
+            if (bgParent == null)
+                return;
             while ((bgProp = (WzSubProperty)bgParent[(i++).ToString()]) != null)
             {
                 int x = InfoTool.GetInt(bgProp["x"]);
@@ -948,12 +957,20 @@ namespace HaCreator.Wz
         /// <param name="Tabs"></param>
         /// <param name="multiBoard"></param>
         /// <param name="rightClickHandler"></param>
-        public static void CreateMapFromImage(int mapId, WzImage mapImage, string mapName, string streetName, string categoryName, WzSubProperty strMapProp, System.Windows.Controls.TabControl Tabs, MultiBoard multiBoard, System.Windows.RoutedEventHandler[] rightClickHandler)
+        public static Board CreateMapFromImage(int mapId, WzImage mapImage, string mapName, string streetName, string categoryName, WzSubProperty strMapProp, System.Windows.Controls.TabControl Tabs, MultiBoard multiBoard, System.Windows.RoutedEventHandler[] rightClickHandler)
         {
+            Board result = null;
+
+            if (mapImage == null)
+                return null;
+
             if (!mapImage.Parsed)
                 mapImage.ParseImage();
 
             List<string> copyPropNames = VerifyMapPropsKnown(mapImage, false);
+
+            if (copyPropNames == null)
+                return null;
 
             MapInfo info = new MapInfo(mapImage, mapName, streetName, categoryName);
             foreach (string copyPropName in copyPropNames)
@@ -979,9 +996,9 @@ namespace HaCreator.Wz
             }
             catch (NoVRException)
             {
-                MessageBox.Show("Error - map does not contain size information and HaCreator was unable to generate it. An error has been logged.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //MessageBox.Show("Error - map does not contain size information and HaCreator was unable to generate it. An error has been logged.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 ErrorLogger.Log(ErrorLevel.IncorrectStructure, "no size @map " + info.id.ToString());
-                return;
+                return null;
             }
 
             lock (multiBoard)
@@ -989,6 +1006,7 @@ namespace HaCreator.Wz
                 CreateMap(streetName, mapName, mapId, WzInfoTools.RemoveLeadingZeros(WzInfoTools.RemoveExtension(mapImage.Name)), CreateStandardMapMenu(rightClickHandler), size, center, Tabs, multiBoard);
 
                 Board mapBoard = multiBoard.SelectedBoard;
+                result = mapBoard;
                 mapBoard.Loading = true; // prevents TS Change callbacks
                 mapBoard.MapInfo = info;
                 if (hasMinimap)
@@ -1028,6 +1046,7 @@ namespace HaCreator.Wz
                 }
                 ErrorLogger.ClearErrors();
             }
+            return result;
         }
 
 
